@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}Chat App{% endblock %}</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <nav class="bg-white shadow p-4 flex justify-between items-center">
+    <div class="text-xl font-semibold">Tableau de bord</div>
+    <div>
+      {% if session.get('user_id') %}
+      <span class="mr-4">Bienvenue, <strong>{{ session.get('prenom') }} {{ session.get('nom') }}</strong></span>
+      <a href="{{ url_for('logout') }}" class="bg-red-600 text-white px-3 py-1 rounded">Déconnexion</a>
+      {% else %}
+      <a href="{{ url_for('login') }}" class="bg-blue-600 text-white px-3 py-1 rounded mr-2">Connexion</a>
+      <a href="{{ url_for('register') }}" class="bg-green-600 text-white px-3 py-1 rounded">Inscription</a>
+      {% endif %}
+    </div>
+  </nav>
+
+  <main class="p-6">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="mb-4">
+          {% for m in messages %}
+            <div class="bg-yellow-100 p-3 rounded">{{ m }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

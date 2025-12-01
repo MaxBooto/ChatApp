@@ -1,0 +1,343 @@
+{% extends "layout.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="grid grid-cols-4 gap-6">
+ 
+  <!-- LEFT COLUMN : MES AMIS -->
+  <div class="col-span-1 bg-white p-4 rounded shadow h-screen overflow-auto">
+    <h3 class="text-lg font-semibold mb-3">Mes Amis</h3>
+    <!-- Barre de recherche amis -->
+    <input id="searchFriend" placeholder="Rechercher un ami..." 
+           class="w-full p-2 border rounded mb-3" onkeyup="filterFriends()">
+
+    <ul id="friendsList" class="space-y-2">
+      <!-- chargé en JS -->
+    </ul>
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div class="col-span-3">
+    <!-- TABS -->
+    <div class="bg-white rounded shadow p-4 mb-4">
+      <div class="flex justify-between items-center mb-4">
+        <div class="flex space-x-4">
+          <button id="discoverTab" class="px-3 py-1 border-b-2 border-blue-500">
+            Découvrir
+          </button>
+          <button id="requestsTab" class="px-3 py-1">
+            Notifications <span id="notifCount" class="ml-2 text-red-600 font-bold"></span>
+          </button>
+        </div>
+        <div class="text-gray-600">
+          Bienvenue, <strong>{{ prenom }} {{ nom }}</strong>
+        </div>
+      </div>
+
+      <!-- Barre de recherche pour les onglets -->
+      <input id="tabSearch" placeholder="Rechercher..." 
+             class="w-full p-2 border rounded mb-4" onkeyup="filterTabContent()">
+
+      <div id="tabContent" class="mt-4"></div>
+    </div>
+
+    <!-- CHAT -->
+    <div class="bg-white rounded shadow p-4 h-[60vh] flex flex-col">
+      <div id="chatHeader" class="border-b pb-2 mb-2 font-semibold">
+        Sélectionne un ami pour discuter
+      </div>
+      <div id="messages" class="flex-1 overflow-auto mb-3 p-2 space-y-3"></div>
+      <div id="chatForm" class="flex space-x-2">
+        <input id="messageInput" class="flex-1 p-2 border rounded" 
+               placeholder="Écrire un message..." />
+        <button id="sendBtn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+          Envoyer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let selectedChatUser = null;
+let currentTab = 'discover';
+let allDiscoverUsers = [];
+
+
+// CHARGER LES AMIS
+async function loadFriends(){
+  const res = await fetch('/api/friends');
+  const friends = await res.json();
+  const ul = document.getElementById("friendsList");
+  ul.innerHTML = "";
+
+  friends.forEach(f => {
+    const li = document.createElement("li");
+    li.className = "p-3 border rounded hover:bg-gray-100 cursor-pointer transition";
+    
+    // Clic sur le nom ouvre le chat
+    li.onclick = () => selectChat(f.id, `${f.prenom} ${f.nom}`);
+
+    li.innerHTML = `
+      <div class="flex justify-between items-center">
+        <div class="font-semibold text-blue-700">${f.prenom} ${f.nom}</div>
+        <div class="flex space-x-2">
+          <!-- SUPPRIMER -->
+          <button class="px-2 py-1 text-sm rounded bg-red-500 text-white hover:bg-red-600"
+                  onclick="event.stopPropagation(); removeFriend(${f.friendship_id})">
+            Supprimer
+          </button>
+          <!-- BLOQUER / DÉBLOQUER -->
+          ${f.blocked 
+            ? `<button class="px-2 py-1 text-sm rounded bg-green-600 text-white hover:bg-green-700"
+                       onclick="event.stopPropagation(); unblockFriend(${f.friendship_id})">Débloquer</button>`
+            : `<button class="px-2 py-1 text-sm rounded bg-gray-700 text-white hover:bg-gray-800"
+                       onclick="event.stopPropagation(); blockFriend(${f.friendship_id})">Bloquer</button>`
+          }
+        </div>
+      </div>
+    `;
+    ul.appendChild(li);
+  });
+}
+
+// RECHERCHE DANS LES AMIS
+function filterFriends(){
+  const input = document.getElementById("searchFriend").value.toLowerCase();
+  const items = document.querySelectorAll("#friendsList li");
+  items.forEach(item => {
+    const text = item.textContent.toLowerCase();
+    item.style.display = text.includes(input) ? "block" : "none";
+  });
+}
+
+// FONCTIONS BLOQUER / SUPPRIMER
+async function blockFriend(id){
+  await fetch('/api/block_friend', { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ friendship_id:id }) });
+  loadFriends();
+}
+async function unblockFriend(id){
+  await fetch('/api/unblock_friend', { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ friendship_id:id }) });
+  loadFriends();
+}
+async function removeFriend(id){
+  if(!confirm("Supprimer cet ami ?")) return;
+  await fetch('/api/remove_friend', { method:"DELETE", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ friendship_id:id }) });
+  loadFriends();
+  if(selectedChatUser) loadMessages(); 
+}
+
+// CHAT
+function selectChat(id, name){
+  selectedChatUser = id;
+  document.getElementById("chatHeader").textContent = "Chat avec " + name;
+  loadMessages();
+}
+
+document.getElementById("sendBtn").addEventListener("click", sendMessage);
+document.getElementById("messageInput").addEventListener("keypress", e => {
+  if(e.key === "Enter") sendMessage();
+});
+
+async function sendMessage() {
+  const input = document.getElementById("messageInput");
+  const txt = input.value.trim();
+  if(!selectedChatUser || !txt) return;
+
+  await fetch("/api/send_message", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ to_id: selectedChatUser, message: txt })
+  });
+  input.value = "";
+  loadMessages();
+}
+
+async function loadMessages(){
+  if(!selectedChatUser) return;
+  const res = await fetch("/api/get_messages?other=" + selectedChatUser);
+  const msgs = await res.json();
+  const box = document.getElementById("messages");
+  box.innerHTML = "";
+
+  msgs.forEach(m => {
+    const div = document.createElement("div");
+    div.className = m.sender_id == {{ session['user_id'] }} ? "text-right" : "text-left";
+
+    const bubble = document.createElement("div");
+    bubble.className = `inline-block p-3 rounded-lg max-w-xs break-words ${
+      m.sender_id == {{ session['user_id'] }} ? "bg-blue-500 text-white" : "bg-gray-200"
+    }`;
+    bubble.textContent = m.message;
+
+    div.appendChild(bubble);
+    box.appendChild(div);
+  });
+  box.scrollTop = box.scrollHeight;
+}
+
+// TABS : DISCOVER + REQUESTS
+document.getElementById("discoverTab").addEventListener("click", () => { currentTab = 'discover'; showDiscover(); });
+document.getElementById("requestsTab").addEventListener("click", () => { currentTab = 'requests'; showRequests(); });
+
+function highlightTab(tabId){
+  document.querySelectorAll("#discoverTab, #requestsTab").forEach(t => t.classList.remove("border-blue-500"));
+  document.getElementById(tabId).classList.add("border-blue-500");
+}
+
+// ------------------ DÉCOUVRIR ------------------
+async function showDiscover(){
+  currentTab = 'discover';
+  highlightTab("discoverTab");
+  document.getElementById("tabSearch").placeholder = "Rechercher des utilisateurs...";
+
+  const [usersRes, friendsRes] = await Promise.all([
+    fetch("/api/users"), 
+    fetch("/api/friends")
+  ]);
+  const allUsers = await usersRes.json();
+  const friends = await friendsRes.json();
+  const friendIds = new Set(friends.map(f => f.id));
+
+  // Exclure soi-même + amis déjà ajoutés
+  const myId = {{ session['user_id'] }};
+  allDiscoverUsers = allUsers.filter(u => u.id !== myId && !friendIds.has(u.id));
+
+  renderDiscover();
+}
+
+function renderDiscover() {
+  const container = document.getElementById("tabContent");
+  const search = document.getElementById("tabSearch").value.toLowerCase();
+  
+  const filtered = allDiscoverUsers.filter(u => 
+    `${u.prenom} ${u.nom}`.toLowerCase().includes(search)
+  );
+
+  container.innerHTML = filtered.length === 0 
+    ? "<p class='text-gray-500 text-center py-8'>Aucun utilisateur trouvé</p>"
+    : "";
+
+  filtered.forEach(u => {
+    const row = document.createElement("div");
+    row.className = "flex justify-between items-center p-3 border-b hover:bg-gray-50";
+    row.innerHTML = `
+      <div class="font-medium">${u.prenom} ${u.nom}</div>
+      <button class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm"
+              onclick="sendFriendRequest(${u.id})">
+        Ajouter ami
+      </button>
+    `;
+    container.appendChild(row);
+  });
+}
+
+async function sendFriendRequest(targetId) {
+  await fetch("/api/send_request", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ target_id: targetId })
+  });
+  alert("Demande d'ami envoyée !");
+  showDiscover();
+}
+
+// ------------------ DEMANDES ------------------
+async function showRequests(){
+  currentTab = 'requests';
+  highlightTab("requestsTab");
+  document.getElementById("tabSearch").placeholder = "Rechercher dans les demandes...";
+
+  const res = await fetch("/api/requests");
+  const data = await res.json();
+
+  const container = document.getElementById("tabContent");
+  const search = document.getElementById("tabSearch").value.toLowerCase();
+
+  container.innerHTML = "<h4 class='font-semibold mb-3'>Demandes reçues</h4>";
+
+  const filteredReceived = data.received.filter(r => 
+    `${r.prenom} ${r.nom}`.toLowerCase().includes(search)
+  );
+
+  if (filteredReceived.length === 0) {
+    container.innerHTML += "<p class='text-gray-500 py-4'>Aucune demande reçue</p>";
+  }
+
+  filteredReceived.forEach(r => {
+    const row = document.createElement("div");
+    row.className = "flex justify-between items-center p-3 border-b";
+    row.innerHTML = `
+      <div class="font-medium">${r.prenom} ${r.nom}</div>
+      <div>
+        <button class="bg-blue-600 text-white px-3 py-2 rounded mr-2 text-sm hover:bg-blue-700"
+                onclick="respondRequest(${r.request_id}, 'accept')">
+          Accepter
+        </button>
+        <button class="bg-red-600 text-white px-3 py-2 rounded text-sm hover:bg-red-700"
+                onclick="respondRequest(${r.request_id}, 'decline')">
+          Refuser
+        </button>
+      </div>
+    `;
+    container.appendChild(row);
+  });
+
+  container.innerHTML += "<h4 class='font-semibold mt-6 mb-3'>Demandes envoyées</h4>";
+  const filteredSent = data.sent.filter(s => 
+    `${s.prenom} ${s.nom}`.toLowerCase().includes(search)
+  );
+
+  if (filteredSent.length === 0) {
+    container.innerHTML += "<p class='text-gray-500 py-4'>Aucune demande en attente</p>";
+  }
+
+  filteredSent.forEach(s => {
+    const row = document.createElement("div");
+    row.className = "flex justify-between items-center p-3 border-b text-gray-600";
+    row.innerHTML = `
+      <div>${s.prenom} ${s.nom}</div>
+      <div class="text-sm italic">En attente...</div>
+    `;
+    container.appendChild(row);
+  });
+}
+
+async function respondRequest(requestId, action) {
+  await fetch("/api/respond_request", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ request_id: requestId, action })
+  });
+  loadFriends();
+  showRequests();
+  loadNotifications();
+}
+
+// Recherche globale dans les onglets
+function filterTabContent() {
+  if (currentTab === 'discover') renderDiscover();
+  else if (currentTab === 'requests') showRequests();
+}
+
+// Compteur notifications
+async function loadNotifications(){
+  const res = await fetch("/api/requests");
+  const data = await res.json();
+  const cnt = data.received.length;
+  document.getElementById("notifCount").textContent = cnt > 0 ? cnt : "";
+}
+
+async function init(){
+  await loadFriends();
+  await showDiscover();
+  await loadNotifications();
+
+  setInterval(() => {
+    if(selectedChatUser) loadMessages();
+    loadNotifications();
+  }, 3000);
+}
+
+init();
+</script>
+{% endblock %}

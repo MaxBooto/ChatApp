@@ -1,0 +1,24 @@
+{% extends "layout.html" %}
+{% block title %}Inscription{% endblock %}
+{% block content %}
+<div class="max-w-md mx-auto bg-white p-6 rounded shadow">
+  <h2 class="text-2xl mb-4">Inscription</h2>
+  {% if error %}
+    <div class="mb-3 text-red-600">{{ error }}</div>
+  {% endif %}
+  <form method="post">
+    <label class="block mb-2">Prénom</label>
+    <input type="text" name="prenom" required class="w-full p-2 border rounded mb-3"/>
+    <label class="block mb-2">Nom</label>
+    <input type="text" name="nom" required class="w-full p-2 border rounded mb-3"/>
+    <label class="block mb-2">Email</label>
+    <input type="email" name="email" required class="w-full p-2 border rounded mb-3"/>
+    <label class="block mb-2">Mot de passe</label>
+    <input type="password" name="password" required class="w-full p-2 border rounded mb-3"/>
+    <label class="block mb-2">Confirmer mot de passe</label>
+    <input type="password" name="confirm" required class="w-full p-2 border rounded mb-3"/>
+    <button type="submit" class="w-full bg-green-600 text-white p-2 rounded">S'inscrire</button>
+  </form>
+  <p class="mt-4 text-sm">Déjà inscrit ? <a href="{{ url_for('login') }}" class="text-blue-600">Se connecter</a></p>
+</div>
+{% endblock %}
