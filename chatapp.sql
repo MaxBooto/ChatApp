@@ -39,9 +39,6 @@ CREATE TABLE `friendships` (
 -- Déchargement des données de la table `friendships`
 --
 
-INSERT INTO `friendships` (`id`, `user_id`, `friend_id`, `status`, `requested_at`) VALUES
-(1, 2, 1, 'accepted', '2025-12-01 19:38:33'),
-(2, 1, 3, 'accepted', '2025-12-01 20:45:46');
 
 -- --------------------------------------------------------
 
@@ -62,17 +59,6 @@ CREATE TABLE `messages` (
 -- Déchargement des données de la table `messages`
 --
 
-INSERT INTO `messages` (`id`, `sender_id`, `receiver_id`, `message`, `sent_at`, `is_read`) VALUES
-(1, 1, 2, 'Bonjour', '2025-12-01 19:39:04', 0),
-(2, 2, 1, 'Ton oncle', '2025-12-01 19:40:00', 0),
-(3, 1, 2, 'Ehhh', '2025-12-01 19:42:17', 0),
-(4, 1, 2, 'oui oui', '2025-12-01 20:17:51', 0),
-(5, 1, 2, 'd', '2025-12-01 20:17:58', 0),
-(6, 2, 1, 'salut', '2025-12-01 20:38:10', 0),
-(7, 2, 1, 'Yo', '2025-12-01 20:38:18', 0),
-(8, 1, 2, 'Ni ?', '2025-12-01 20:40:24', 0),
-(9, 2, 1, 'Ehh', '2025-12-01 20:40:33', 0);
-
 -- --------------------------------------------------------
 
 --
@@ -92,10 +78,6 @@ CREATE TABLE `users` (
 -- Déchargement des données de la table `users`
 --
 
-INSERT INTO `users` (`id`, `prenom`, `nom`, `email`, `password_hash`, `created_at`) VALUES
-(1, 'Max', 'Mbomba', 'max@gmail.com', 'scrypt:32768:8:1$apCtZkPLNxdWaAtc$59dd32882ce70dcc1366c9c22032e1735dccce15ace5e682307d80ea9e7a45f71ffb711daf4942ba657d5db72b7814422da7ce25ab9ee13d513127d8dda999fb', '2025-12-01 19:37:32'),
-(2, 'Jo', 'Kapend', 'kap@gmail.com', 'scrypt:32768:8:1$NoVFNgOVrx5scz7d$76c00585923c524eeeea74a4c6298dcc9329aca9be635074131203ee17039a952f40cf4260d16cf979d9d59b4fbd8f82431dc84fe6e90c54a81bc26f2cb0d547', '2025-12-01 19:38:20'),
-(3, 'Jc', 'Yizila', 'JC@gmail.com', 'scrypt:32768:8:1$hXLN4I4qrEzStrNG$dd134e2740a61865251a41b8da3ce93e16b0a7391fe0297754d4df58653fb9d90404e8445b36dfb3141037be6c9e3ae75c8a129bd80db3ffa3b855c654dc5dd9', '2025-12-01 20:43:54');
 
 --
 -- Index pour les tables déchargées
